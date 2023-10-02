@@ -1,20 +1,22 @@
 use clap::Parser;
+use std::path::Path;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Name of the person to greet
+    /// Install node modules
     #[arg(short, long)]
     install: String,
 
-    /// Number of times to greet
-    #[arg(short, long, default_value_t = 1)]
-    count: u8,
+    /// Add a node module to package.json
+    #[arg(short, long)]
+    add: String,
 }
 
 fn main() {
     let args = Args::parse();
-
-    for _ in 0..args.count {
-        println!("Hello {}!", args.install)
+    if !(Path::new("package.json").exists()){
+        println!("Did not find package.json. Are you sure you are in project path?");
+        return;
     }
+    println!("Found package.json");
 }
