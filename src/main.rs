@@ -1,9 +1,11 @@
 mod types;
 
+use std::collections::HashMap;
 use clap::{Parser, Subcommand};
 use std::path::Path;
-use crate::types::Deps;
+use crate::types::{decompress_tgz, Deps};
 use std::fs;
+use clap::builder::Str;
 use reqwest::{Client, Error};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -55,7 +57,8 @@ async fn main() {
                let _ = download_module(url_pointer, name).await;
            }
            parsed_data.dependencies.clear();
-        }
+           deps_download(parsed_data.dev_dependencies);
+       }
         Commands::Add { packagename } =>{
             if !(Path::new("package.json").exists()){
                 println!("Did not find package.json. Are you sure you are in project path?");
@@ -66,6 +69,71 @@ async fn main() {
         }
     }
 }
+
+async fn deps_search (package_name: String){
+    let mut deps = tokio::fs::File::open(format!("node_modules/{}/package.json", package_name)).await.expect("Failed to open package.json");
+    let mut contents = String::new();
+    deps.read_to_string(&mut contents).await.expect("Failed to read package.json");
+    let mut parsed_data: Deps = serde_json::from_str(&contents).expect("Failed to parse JSON");
+    for (key, value) in &parsed_data.dependencies{
+        let mut version: &str = value;
+        let mut name: &str = key;
+        let mut url: String = String::from("");
+        if value.contains("^"){
+            version = &value[1..];
+        }
+        if key.contains("@"){
+            name = &key[key.find("/").unwrap() + 1..];
+            url = format!("https://registry.npmjs.org/{}/-/{}-{}.tgz", key, name, version);
+        }
+        else{
+            url = format!("https://registry.npmjs.org/{}/-/{}-{}.tgz", key, key, version);
+        }
+        let url_pointer: &str = &url;
+        let _ = download_module(url_pointer, name).await;
+    }
+    parsed_data.dependencies.clear();
+    for (key, value) in &parsed_data.dev_dependencies{
+        let mut version: &str = value;
+        let mut name: &str = key;
+        let mut url: String = String::from("");
+        if value.contains("^"){
+            version = &value[1..];
+        }
+        if key.contains("@"){
+            name = &key[key.find("/").unwrap() + 1..];
+            url = format!("https://registry.npmjs.org/{}/-/{}-{}.tgz", key, name, version);
+        }
+        else{
+            url = format!("https://registry.npmjs.org/{}/-/{}-{}.tgz", key, key, version);
+        }
+        let url_pointer: &str = &url;
+        let _ = download_module(url_pointer, name).await;
+    }
+    parsed_data.dev_dependencies.clear();
+}
+
+async fn deps_download(depshash: &mut HashMap<String, String>){
+    for (key, value) in depshash{
+        let mut version: &str = value;
+        let mut name: &str = key;
+        let mut url: String = String::from("");
+        if value.contains("^"){
+            version = &value[1..];
+        }
+        if key.contains("@"){
+            name = &key[key.find("/").unwrap() + 1..];
+            url = format!("https://registry.npmjs.org/{}/-/{}-{}.tgz", key, name, version);
+        }
+        else{
+            url = format!("https://registry.npmjs.org/{}/-/{}-{}.tgz", key, key, version);
+        }
+        let url_pointer: &str = &url;
+        let _ = download_module(url_pointer, name).await;
+    }
+    depshash.clear();
+}
+
 async fn download_module(url: &str, name: &str) -> Result<(), Error> {
     println!("{}", name);
     println!("{}", url);
@@ -73,16 +141,11 @@ async fn download_module(url: &str, name: &str) -> Result<(), Error> {
     let response = client.get(url).send().await?;
 
     if response.status().is_success() {
-        // Create or open the file for writing asynchronously
         let path = format!("node_modules/{}.tgz", name);
         let mut file = tokio::fs::File::create(&path)
             .await
             .expect("Failed to create or open file");
-
-        // Get the file content as bytes
         let content = response.bytes().await?;
-
-        // Write the downloaded content to the file
         file.write_all(&content)
             .await
             .expect("Failed to write content to file");
@@ -91,7 +154,7 @@ async fn download_module(url: &str, name: &str) -> Result<(), Error> {
     } else {
         eprintln!("Failed to download {}: Status code: {:?}", name, response.status());
     }
-
     println!("Done downloading {}", name);
+    decompress_tgz(String::from(name));
     Ok(())
 }
