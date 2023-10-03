@@ -1,22 +1,32 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use std::path::Path;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
-struct Args {
-    /// Install node modules
-    #[arg(short, long)]
-    install: String,
-
-    /// Add a node module to package.json
-    #[arg(short, long)]
-    add: String,
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+#[derive(Subcommand, Debug)]
+enum Commands {
+    Install {},
+    Add {packagename: String}
 }
 
 fn main() {
-    let args = Args::parse();
-    if !(Path::new("package.json").exists()){
-        println!("Did not find package.json. Are you sure you are in project path?");
-        return;
+    let cli = Cli::parse();
+    match &cli.command {
+       Commands::Install {} => {
+            if !(Path::new("package.json").exists()){
+                println!("Did not find package.json. Are you sure you are in project path?");
+                println!("Exiting");
+                return;
+            }
+            println!("Found package.json");
+        }
+        Commands::Add { packagename } =>{
+            println!("Adding {} to project", packagename);
+        }
     }
-    println!("Found package.json");
+
 }
