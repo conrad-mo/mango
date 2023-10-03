@@ -19,27 +19,38 @@ pub struct Deps {
 pub(crate) async fn decompress_tgz(name: String) {
     println!("Unzipping {}", name);
     let tar = File::open(format!("node_modules/{}.tgz", name)).unwrap();
+    if !std::path::Path::new(&format!("node_modules/{}.tgz", name)).exists() {
+        println!("File not found: {:?}", format!("node_modules/{}.tgz", name));
+        return;
+    }
     let dec = GzDecoder::new(tar);
     let mut a = Archive::new(dec);
     for entry in a.entries().unwrap() {
-        let mut entry = entry.unwrap();
-        let mut entry_path = PathBuf::new();
-        entry_path.push("node_modules/");
-        entry_path.push(&name);
-        match entry.path().unwrap().strip_prefix("package") {
-            Ok(subpath) => {
-                entry_path.push(subpath);
-                if let Some(parent) = entry_path.parent() {
-                    std::fs::create_dir_all(parent).unwrap();
+        match entry {
+            Ok(mut value) =>{
+                let mut entry_path = PathBuf::new();
+                entry_path.push("node_modules/");
+                entry_path.push(&name);
+                match value.path().unwrap().strip_prefix("package") {
+                    Ok(subpath) => {
+                        entry_path.push(subpath);
+                        if let Some(parent) = entry_path.parent() {
+                            std::fs::create_dir_all(parent).unwrap();
+                        }
+                        value.unpack(&entry_path).unwrap();
+                    }
+                    Err(error) => {
+                        println!("Failed to strip prefix: {:?}", error);
+
+
+                    }
                 }
-                entry.unpack(&entry_path).unwrap();
             }
             Err(error) => {
-                println!("Failed to strip prefix: {:?}", error);
-
-
+                println!("Failed to unwrap entry {:?}", error)
             }
         }
+
     }
     let _ = fs::remove_file(format!("node_modules/{}.tgz", name));
     println!("Done unzipping");
