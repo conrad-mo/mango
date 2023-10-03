@@ -3,8 +3,7 @@ mod types;
 use std::collections::HashMap;
 use clap::{Parser, Subcommand};
 use std::path::Path;
-// use crate::types::{decompress_tgz, Deps};
-use crate::types::{Deps};
+use crate::types::{decompress_tgz, Deps};
 use std::fs;
 use reqwest::{Client, Error};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -104,6 +103,6 @@ async fn download_module(url: &str, name: &str) -> Result<(), Error> {
         eprintln!("Failed to download {}: Status code: {:?}", name, response.status());
     }
     println!("Done downloading {}", name);
-    //decompress_tgz(String::from(name));
+    decompress_tgz(String::from(name)).await;
     Ok(())
 }
