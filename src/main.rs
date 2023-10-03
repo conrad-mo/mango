@@ -32,9 +32,9 @@ async fn main() {
                return;
            }
            println!("Found package.json");
-           let deps = tokio::fs::File::open("package.json").await.expect("Failed to open package.json");
+           let mut deps = tokio::fs::File::open("package.json").await.expect("Failed to open package.json");
            let mut contents = String::new();
-           deps.take(1024).read_to_string(&mut contents).await.expect("Failed to read package.json");
+           deps.read_to_string(&mut contents).await.expect("Failed to read package.json");
            let mut parsed_data: Deps = serde_json::from_str(&contents).expect("Failed to parse JSON");
            fs::create_dir_all("node_modules").expect("Failed to create node_modules folder");
            for (key, value) in &parsed_data.dependencies{
