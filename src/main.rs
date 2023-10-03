@@ -5,7 +5,10 @@ use clap::{Parser, Subcommand};
 use std::path::Path;
 use crate::types::{decompress_tgz, Deps};
 use std::fs;
+use std::fs::File;
+use flate2::read::GzDecoder;
 use reqwest::{Client, Error};
+use tar::Archive;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Parser, Debug)]

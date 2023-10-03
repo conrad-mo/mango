@@ -2,9 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
-use std::io::Read;
 use flate2::read::{GzDecoder};
-use std::io::prelude::*;
 use std::path::PathBuf;
 use tar::Archive;
 
@@ -40,9 +38,23 @@ pub(crate) async fn decompress_tgz(name: String) {
                         value.unpack(&entry_path).unwrap();
                     }
                     Err(error) => {
-                        println!("Failed to strip prefix: {:?}", error);
-
-
+                        println!("No package folder {:?}", error);
+                        match value.path().unwrap().strip_prefix(&name) {
+                            Ok(subpath) => {
+                                entry_path.push(subpath);
+                                if let Some(parent) = entry_path.parent() {
+                                    std::fs::create_dir_all(parent).unwrap();
+                                }
+                                value.unpack(&entry_path).unwrap();
+                            }
+                            Err(error) => {
+                                println!("No subfolder {:?}", error);
+                                let tar = File::open(format!("node_modules/{}.tgz", name)).unwrap();
+                                let dec = GzDecoder::new(tar);
+                                let mut a = Archive::new(dec);
+                                a.unpack(format!("node_modules/{}", name)).unwrap();
+                            }
+                        }
                     }
                 }
             }
