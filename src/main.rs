@@ -3,9 +3,9 @@ mod types;
 use std::collections::HashMap;
 use clap::{Parser, Subcommand};
 use std::path::Path;
-use crate::types::{decompress_tgz, Deps};
+// use crate::types::{decompress_tgz, Deps};
+use crate::types::{Deps};
 use std::fs;
-use clap::builder::Str;
 use reqwest::{Client, Error};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -39,25 +39,8 @@ async fn main() {
            deps.read_to_string(&mut contents).await.expect("Failed to read package.json");
            let mut parsed_data: Deps = serde_json::from_str(&contents).expect("Failed to parse JSON");
            fs::create_dir_all("node_modules").expect("Failed to create node_modules folder");
-           for (key, value) in &parsed_data.dependencies{
-               let mut version: &str = value;
-               let mut name: &str = key;
-               let mut url: String = String::from("");
-               if value.contains("^"){
-                   version = &value[1..];
-               }
-               if key.contains("@"){
-                   name = &key[key.find("/").unwrap() + 1..];
-                   url = format!("https://registry.npmjs.org/{}/-/{}-{}.tgz", key, name, version);
-               }
-               else{
-                   url = format!("https://registry.npmjs.org/{}/-/{}-{}.tgz", key, key, version);
-               }
-               let url_pointer: &str = &url;
-               let _ = download_module(url_pointer, name).await;
-           }
-           parsed_data.dependencies.clear();
-           deps_download(parsed_data.dev_dependencies);
+           deps_download(&mut parsed_data.dependencies).await;
+           deps_download(&mut parsed_data.dev_dependencies).await;
        }
         Commands::Add { packagename } =>{
             if !(Path::new("package.json").exists()){
@@ -75,46 +58,12 @@ async fn deps_search (package_name: String){
     let mut contents = String::new();
     deps.read_to_string(&mut contents).await.expect("Failed to read package.json");
     let mut parsed_data: Deps = serde_json::from_str(&contents).expect("Failed to parse JSON");
-    for (key, value) in &parsed_data.dependencies{
-        let mut version: &str = value;
-        let mut name: &str = key;
-        let mut url: String = String::from("");
-        if value.contains("^"){
-            version = &value[1..];
-        }
-        if key.contains("@"){
-            name = &key[key.find("/").unwrap() + 1..];
-            url = format!("https://registry.npmjs.org/{}/-/{}-{}.tgz", key, name, version);
-        }
-        else{
-            url = format!("https://registry.npmjs.org/{}/-/{}-{}.tgz", key, key, version);
-        }
-        let url_pointer: &str = &url;
-        let _ = download_module(url_pointer, name).await;
-    }
-    parsed_data.dependencies.clear();
-    for (key, value) in &parsed_data.dev_dependencies{
-        let mut version: &str = value;
-        let mut name: &str = key;
-        let mut url: String = String::from("");
-        if value.contains("^"){
-            version = &value[1..];
-        }
-        if key.contains("@"){
-            name = &key[key.find("/").unwrap() + 1..];
-            url = format!("https://registry.npmjs.org/{}/-/{}-{}.tgz", key, name, version);
-        }
-        else{
-            url = format!("https://registry.npmjs.org/{}/-/{}-{}.tgz", key, key, version);
-        }
-        let url_pointer: &str = &url;
-        let _ = download_module(url_pointer, name).await;
-    }
-    parsed_data.dev_dependencies.clear();
+    deps_download(&mut parsed_data.dependencies).await;
+    deps_download(&mut parsed_data.dev_dependencies).await;
 }
 
 async fn deps_download(depshash: &mut HashMap<String, String>){
-    for (key, value) in depshash{
+    for (key, value) in &mut *depshash{
         let mut version: &str = value;
         let mut name: &str = key;
         let mut url: String = String::from("");
@@ -155,6 +104,6 @@ async fn download_module(url: &str, name: &str) -> Result<(), Error> {
         eprintln!("Failed to download {}: Status code: {:?}", name, response.status());
     }
     println!("Done downloading {}", name);
-    decompress_tgz(String::from(name));
+    //decompress_tgz(String::from(name));
     Ok(())
 }

@@ -12,12 +12,12 @@ pub struct Deps {
     pub dev_dependencies: HashMap<String, String>,
 }
 
-async fn decompress_tgz(name: String) -> Result<(), Box<dyn std::error::Error>> {
-    let path = ("node_modules/{}.tgz", name);
-    let tar_gz = File::open(path);
-    let tar = GzDecoder::new(tar_gz);
-    let mut archive = Archive::new(tar);
-    archive.unpack("node_modules")?;
-
-    Ok(())
-}
+// pub(crate) async fn decompress_tgz(name: String) -> Result<(), Box<dyn std::error::Error>> {
+//     let path = ("node_modules/{}.tgz", name);
+//     let tar_gz = File::open(path);
+//     let tar = GzDecoder::new(tar_gz);
+//     let mut archive = Archive::new(tar);
+//     archive.unpack("node_modules")?;
+//
+//     Ok(())
+// }
