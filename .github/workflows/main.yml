@@ -26,5 +26,5 @@ jobs:
         with:
           name: ${{ matrix.os }}
           path: |
-            target/release/honeydew-rs
-            target/release/honeydew-rs.exe
+            target/release/mango
+            target/release/mango.exe
