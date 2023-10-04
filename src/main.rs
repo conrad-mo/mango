@@ -88,24 +88,26 @@ async fn deps_download(depshash: &mut HashMap<String, String>){
 async fn download_module(url: &str, name: &str) -> Result<(), Error> {
     println!("{}", name);
     println!("{}", url);
-    let client = Client::new();
-    let response = client.get(url).send().await?;
+    if !Path::new(&format!("node_modules/{}", name)).exists() {
+        let client = Client::new();
+        let response = client.get(url).send().await?;
 
-    if response.status().is_success() {
-        let path = format!("node_modules/{}.tgz", name);
-        let mut file = tokio::fs::File::create(&path)
-            .await
-            .expect("Failed to create or open file");
-        let content = response.bytes().await?;
-        file.write_all(&content)
-            .await
-            .expect("Failed to write content to file");
+        if response.status().is_success() {
+            let path = format!("node_modules/{}.tgz", name);
+            let mut file = tokio::fs::File::create(&path)
+                .await
+                .expect("Failed to create or open file");
+            let content = response.bytes().await?;
+            file.write_all(&content)
+                .await
+                .expect("Failed to write content to file");
 
-        println!("File downloaded successfully to: {:?}", path);
-    } else {
-        eprintln!("Failed to download {}: Status code: {:?}", name, response.status());
+            println!("File downloaded successfully to: {:?}", path);
+        } else {
+            eprintln!("Failed to download {}: Status code: {:?}", name, response.status());
+        }
+        println!("Done downloading {}", name);
+        decompress_tgz(String::from(name)).await;
     }
-    println!("Done downloading {}", name);
-    decompress_tgz(String::from(name)).await;
     Ok(())
 }

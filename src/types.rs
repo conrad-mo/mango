@@ -48,7 +48,7 @@ pub(crate) async fn decompress_tgz(name: String) {
                                 value.unpack(&entry_path).unwrap();
                             }
                             Err(error) => {
-                                println!("No subfolder {:?}", error);
+                                println!("No subfolder, defaulting to normal {:?}", error);
                                 let tar = File::open(format!("node_modules/{}.tgz", name)).unwrap();
                                 let dec = GzDecoder::new(tar);
                                 let mut a = Archive::new(dec);
