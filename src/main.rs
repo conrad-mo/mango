@@ -3,12 +3,9 @@ mod types;
 use std::collections::HashMap;
 use clap::{Parser, Subcommand};
 use std::path::Path;
-use crate::types::{decompress_tgz, Deps};
+use crate::types::{decompress_tgz, Deps, lock_gen};
 use std::fs;
-use std::fs::File;
-use flate2::read::GzDecoder;
 use reqwest::{Client, Error};
-use tar::Archive;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Parser, Debug)]
@@ -36,6 +33,10 @@ async fn main() {
                return;
            }
            println!("Found package.json");
+           if !(Path::new("mango.lock").exists()){
+               println!("Did not find mango.lock. Generating mango.lock");
+               lock_gen().await;
+           }
            let mut deps = tokio::fs::File::open("package.json").await.expect("Failed to open package.json");
            let mut contents = String::new();
            deps.read_to_string(&mut contents).await.expect("Failed to read package.json");

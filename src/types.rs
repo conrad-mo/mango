@@ -14,6 +14,15 @@ pub struct Deps {
     pub dev_dependencies: HashMap<String, String>,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DepLeaf {
+    pub name: String,
+    pub deps: Vec<String>,
+}
+
+pub async fn lock_gen(){
+
+}
 pub(crate) async fn decompress_tgz(name: String) {
     println!("Unzipping {}", name);
     let tar = File::open(format!("node_modules/{}.tgz", name)).unwrap();
