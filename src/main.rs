@@ -1,11 +1,11 @@
 mod types;
 
-use std::collections::HashMap;
+use crate::types::{decompress_tgz, lock_gen, Deps};
 use clap::{Parser, Subcommand};
-use std::path::Path;
-use crate::types::{decompress_tgz, Deps, lock_gen};
-use std::fs;
 use reqwest::{Client, Error};
+use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Parser, Debug)]
@@ -19,34 +19,39 @@ enum Commands {
     /// Install node_modules
     Install {},
     /// Add a node dependency to project
-    Add {packagename: String}
+    Add { packagename: String },
 }
 
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
     match &cli.command {
-       Commands::Install {} => {
-           if !(Path::new("package.json").exists()){
-               println!("Did not find package.json. Are you sure you are in project path?");
-               println!("Exiting");
-               return;
-           }
-           println!("Found package.json");
-           if !(Path::new("mango.lock").exists()){
-               println!("Did not find mango.lock. Generating mango.lock");
-               lock_gen().await;
-           }
-           let mut deps = tokio::fs::File::open("package.json").await.expect("Failed to open package.json");
-           let mut contents = String::new();
-           deps.read_to_string(&mut contents).await.expect("Failed to read package.json");
-           let mut parsed_data: Deps = serde_json::from_str(&contents).expect("Failed to parse JSON");
-           fs::create_dir_all("node_modules").expect("Failed to create node_modules folder");
-           deps_download(&mut parsed_data.dependencies).await;
-           deps_download(&mut parsed_data.dev_dependencies).await;
-       }
-        Commands::Add { packagename } =>{
-            if !(Path::new("package.json").exists()){
+        Commands::Install {} => {
+            if !(Path::new("package.json").exists()) {
+                println!("Did not find package.json. Are you sure you are in project path?");
+                println!("Exiting");
+                return;
+            }
+            println!("Found package.json");
+            if !(Path::new("mango.lock").exists()) {
+                println!("Did not find mango.lock. Generating mango.lock");
+                lock_gen().await;
+            }
+            let mut deps = tokio::fs::File::open("package.json")
+                .await
+                .expect("Failed to open package.json");
+            let mut contents = String::new();
+            deps.read_to_string(&mut contents)
+                .await
+                .expect("Failed to read package.json");
+            let mut parsed_data: Deps =
+                serde_json::from_str(&contents).expect("Failed to parse JSON");
+            fs::create_dir_all("node_modules").expect("Failed to create node_modules folder");
+            deps_download(&mut parsed_data.dependencies).await;
+            deps_download(&mut parsed_data.dev_dependencies).await;
+        }
+        Commands::Add { packagename } => {
+            if !(Path::new("package.json").exists()) {
                 println!("Did not find package.json. Are you sure you are in project path?");
                 println!("Exiting");
                 return;
@@ -56,29 +61,38 @@ async fn main() {
     }
 }
 
-async fn deps_search (package_name: String){
-    let mut deps = tokio::fs::File::open(format!("node_modules/{}/package.json", package_name)).await.expect("Failed to open package.json");
+async fn deps_search(package_name: String) {
+    let mut deps = tokio::fs::File::open(format!("node_modules/{}/package.json", package_name))
+        .await
+        .expect("Failed to open package.json");
     let mut contents = String::new();
-    deps.read_to_string(&mut contents).await.expect("Failed to read package.json");
+    deps.read_to_string(&mut contents)
+        .await
+        .expect("Failed to read package.json");
     let mut parsed_data: Deps = serde_json::from_str(&contents).expect("Failed to parse JSON");
     deps_download(&mut parsed_data.dependencies).await;
     deps_download(&mut parsed_data.dev_dependencies).await;
 }
 
-async fn deps_download(depshash: &mut HashMap<String, String>){
-    for (key, value) in &mut *depshash{
+async fn deps_download(depshash: &mut HashMap<String, String>) {
+    for (key, value) in &mut *depshash {
         let mut version: &str = value;
         let mut name: &str = key;
         let mut url: String = String::from("");
-        if value.contains("^"){
+        if value.contains("^") {
             version = &value[1..];
         }
-        if key.contains("@"){
+        if key.contains("@") {
             name = &key[key.find("/").unwrap() + 1..];
-            url = format!("https://registry.npmjs.org/{}/-/{}-{}.tgz", key, name, version);
-        }
-        else{
-            url = format!("https://registry.npmjs.org/{}/-/{}-{}.tgz", key, key, version);
+            url = format!(
+                "https://registry.npmjs.org/{}/-/{}-{}.tgz",
+                key, name, version
+            );
+        } else {
+            url = format!(
+                "https://registry.npmjs.org/{}/-/{}-{}.tgz",
+                key, key, version
+            );
         }
         let url_pointer: &str = &url;
         let _ = download_module(url_pointer, name).await;
@@ -105,7 +119,11 @@ async fn download_module(url: &str, name: &str) -> Result<(), Error> {
 
             println!("File downloaded successfully to: {:?}", path);
         } else {
-            eprintln!("Failed to download {}: Status code: {:?}", name, response.status());
+            eprintln!(
+                "Failed to download {}: Status code: {:?}",
+                name,
+                response.status()
+            );
         }
         println!("Done downloading {}", name);
         decompress_tgz(String::from(name)).await;

@@ -1,8 +1,8 @@
+use flate2::read::GzDecoder;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use serde::{Deserialize, Serialize};
 use std::fs::File;
-use flate2::read::{GzDecoder};
 use std::path::PathBuf;
 use tar::Archive;
 
@@ -20,9 +20,7 @@ pub struct DepLeaf {
     pub deps: Vec<String>,
 }
 
-pub async fn lock_gen(){
-
-}
+pub async fn lock_gen() {}
 pub(crate) async fn decompress_tgz(name: String) {
     println!("Unzipping {}", name);
     let tar = File::open(format!("node_modules/{}.tgz", name)).unwrap();
@@ -34,7 +32,7 @@ pub(crate) async fn decompress_tgz(name: String) {
     let mut a = Archive::new(dec);
     for entry in a.entries().unwrap() {
         match entry {
-            Ok(mut value) =>{
+            Ok(mut value) => {
                 let mut entry_path = PathBuf::new();
                 entry_path.push("node_modules/");
                 entry_path.push(&name);
@@ -71,7 +69,6 @@ pub(crate) async fn decompress_tgz(name: String) {
                 println!("Failed to unwrap entry {:?}", error)
             }
         }
-
     }
     let _ = fs::remove_file(format!("node_modules/{}.tgz", name));
     println!("Done unzipping");
