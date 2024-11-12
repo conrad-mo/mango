@@ -28,7 +28,7 @@ pub async fn deps_download(depshash: &mut HashMap<String, String>) {
     for (key, value) in &mut *depshash {
         let mut version: &str = value;
         let mut name: &str = key;
-        let mut url: String = String::from("");
+        let url: String;
         if value.contains("^") {
             version = &value[1..];
         }
