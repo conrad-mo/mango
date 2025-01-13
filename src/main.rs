@@ -32,17 +32,17 @@ async fn main() {
                 return;
             }
             println!("Found package.json");
-            if !(Path::new("mango.lock").exists()) {
-                println!("Did not find mango.lock. Generating mango.lock");
+            if !(Path::new("package-lock.json").exists()) {
+                println!("Did not find package-lock.json. Generating package-lock.json");
                 lock_gen().await;
             }
-            let mut deps = tokio::fs::File::open("package.json")
+            let mut deps = tokio::fs::File::open("package-lock.json")
                 .await
-                .expect("Failed to open package.json");
+                .expect("Failed to open package-lock.json");
             let mut contents = String::new();
             deps.read_to_string(&mut contents)
                 .await
-                .expect("Failed to read package.json");
+                .expect("Failed to read package-lock.json");
             let mut parsed_data: Deps =
                 serde_json::from_str(&contents).expect("Failed to parse JSON");
             fs::create_dir_all("node_modules").expect("Failed to create node_modules folder");
